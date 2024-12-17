@@ -2,76 +2,92 @@ const btn = document.querySelector('#btn')
 const coordinates = document.querySelector('.coordinates')
 const h1 = document.querySelector('h1')
 let index = 10
+let bestLocation = null
+let locationAttempts = 0
 
-function fetchAndAnalyseCoord() {
+function fetchAndImproveLocation() {
   navigator.geolocation.getCurrentPosition(
     (location) => {
-      const data = location.coords.toJSON()
+      const currentData = location.coords.toJSON()
 
-      h1.style.display = 'none'
+      // First attempt or more accurate location found
+      if (!bestLocation || currentData.accuracy < bestLocation.accuracy) {
+        bestLocation = currentData
+        console.log(
+          `Improved location accuracy: ${currentData.accuracy} meters`
+        )
+      }
 
-      const latitude = data.latitude
-      const longitude = data.longitude
-      const accuracy = data.accuracy
-
-      const dataTemplate = `<p class="description">Your current latitude and longitude values</p>
-																	<p><strong>Accuracy:</strong> <span id="accuracy">${Math.trunc(
-                                    accuracy
-                                  )} meters</span></p>
-																	<p><strong>Latitude:</strong> <span id="latitude">${latitude}</span></p>
-																	<p><strong>Longitude:</strong> <span id="longitude">${longitude}</span></p>
-																	<a href="https://www.google.com/maps?q=${latitude},${longitude}" target="_blank">View on Google Maps</a>`
-
-      coordinates.insertAdjacentHTML('beforeend', dataTemplate)
-
-      console.log(data)
+      locationAttempts++
     },
     (error) => {
-      let errorMessage = ''
-      switch (error.code) {
-        case error.PERMISSION_DENIED:
-          errorMessage = 'Permission denied. Please enable location services.'
-          break
-        case error.POSITION_UNAVAILABLE:
-          errorMessage = 'Position unavailable. Please try again later.'
-          break
-        case error.TIMEOUT:
-          errorMessage = 'Request timed out. Please try again.'
-          break
-        default:
-          errorMessage = 'An unknown error occurred.'
-      }
-      coordinates.innerHTML = errorMessage
-      alert(errorMessage)
+      console.warn(`Location attempt failed: ${error.message}`)
     },
     {
       enableHighAccuracy: true,
       maximumAge: 0,
-      timeout: 15000, // 15 sec
+      timeout: 5000, // Shorter timeout to allow multiple attempts
     }
   )
+}
 
-  clearInterval(waitAndAnalyse)
+function displayLocation() {
+  if (bestLocation) {
+    h1.style.display = 'none'
+    const { latitude, longitude, accuracy } = bestLocation
+
+    const dataTemplate = `
+      <p class="description">Your most precise current location</p>
+      <p><strong>Attempts:</strong> <span>${locationAttempts}</span></p>
+      <p><strong>Accuracy:</strong> <span id="accuracy">${Math.trunc(
+        accuracy
+      )} meters</span></p>
+      <p><strong>Latitude:</strong> <span id="latitude">${latitude}</span></p>
+      <p><strong>Longitude:</strong> <span id="longitude">${longitude}</span></p>
+      <a href="https://www.google.com/maps?q=${latitude},${longitude}" target="_blank">View on Google Maps</a>
+    `
+
+    coordinates.innerHTML = dataTemplate
+  } else {
+    let errorMessage = 'Could not retrieve location'
+    coordinates.innerHTML = errorMessage
+    alert(errorMessage)
+  }
 }
 
 function getLocation() {
   if (navigator.geolocation) {
-    waitAndAnalyse = setInterval(() => {
-      fetchAndAnalyseCoord()
-    }, 10000)
+    // Clear any existing intervals
+    if (window.locationInterval) clearInterval(window.locationInterval)
+    if (window.countdownInterval) clearInterval(window.countdownInterval)
 
-    let loading = setInterval(() => {
+    // Reset variables
+    bestLocation = null
+    locationAttempts = 0
+    index = 10
+
+    // Attempt to get location multiple times during countdown
+    window.locationInterval = setInterval(fetchAndImproveLocation, 1000)
+
+    // Countdown and final location display
+    window.countdownInterval = setInterval(() => {
       h1.innerText = `Please wait ${index} sec`
       index--
 
       if (index < 1) {
-        clearInterval(loading)
+        // Stop location attempts
+        clearInterval(window.locationInterval)
+        clearInterval(window.countdownInterval)
+
+        // Display final location
+        displayLocation()
       }
     }, 1000)
 
     btn.style.display = 'none'
   } else {
-    console.warn(`Sorry! your device does not support Geo Location`)
+    console.warn(`Sorry! Your device does not support Geo Location`)
+    alert('Geolocation is not supported by this browser.')
   }
 }
 
