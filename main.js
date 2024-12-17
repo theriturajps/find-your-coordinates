@@ -39,9 +39,7 @@ function displayLocation() {
     const dataTemplate = `
       <p class="description">Your most precise current location</p>
       <p><strong>Attempts:</strong> <span>${locationAttempts}</span></p>
-      <p><strong>Accuracy:</strong> <span id="accuracy">${Math.trunc(
-        accuracy
-      )} meters</span></p>
+      <p><strong>Accuracy:</strong> <span id="accuracy">${Math.trunc(accuracy)} meters</span></p>
       <p><strong>Latitude:</strong> <span id="latitude">${latitude}</span></p>
       <p><strong>Longitude:</strong> <span id="longitude">${longitude}</span></p>
       <a href="https://www.google.com/maps?q=${latitude},${longitude}" target="_blank">View on Google Maps</a>
